@@ -1,0 +1,22 @@
+{
+  "folders": [
+    { "path": "." }
+  ],
+  "settings": {
+    "files.associations": {
+      "clawlite.sh": "shellscript"
+    },
+    "shellcheck.enable": true,
+    "shellformat.flag": "-i 2 -ci -bn",
+    "files.exclude": {
+      "**/.DS_Store": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "timonwong.shellcheck",
+      "foxundermoon.shell-format",
+      "mads-hartmann.bash-ide-vscode"
+    ]
+  }
+}
