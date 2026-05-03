@@ -1,0 +1,36 @@
+# clawlite config - sourced as POSIX shell.
+PROVIDER=openai
+MODEL_OPENAI=gpt-5.5
+MODEL_ANTHROPIC=claude-sonnet-4-5
+OPENAI_BASE_URL=https://api.openai.com/v1
+ANTHROPIC_BASE_URL=https://api.anthropic.com/v1
+
+# Shell tool calling: model can run commands via <shell>...</shell> blocks.
+TOOLS=1
+TOOL_MAX_ITERS=50
+TOOL_OUTPUT_LIMIT=32768
+# Shell tool calls run without confirmation by default. Set CLAW_YOLO=0
+# (or pass --confirm) to be prompted before each command.
+CLAW_YOLO=1
+
+# Mentor pass: run a second claw instance to critique + revise each answer.
+MENTOR=0
+# Allow mentor review pass to use shell tools for workspace inspection.
+MENTOR_TOOLS=1
+
+# Rolling memory windows (number of entries kept verbatim):
+USER_WINDOW=2000
+ASSIST_WINDOW=2000
+
+# Set JOURNAL=1 (or pass --journal) to inject the per-session journal
+# (compacted AI responses) into the system prompt.
+JOURNAL=0
+
+# Reply rendering: off | on | auto
+MARKDOWN=off
+
+# OPENAI_API_KEY=sk-...
+# ANTHROPIC_API_KEY=sk-ant-...
+
+# Runtime
+MAX_ITERATIONS=50

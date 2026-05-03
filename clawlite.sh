@@ -20,6 +20,8 @@
 #   claw --no-tools               disable shell tool calling
 #   claw --confirm                ask y/N before each shell tool call
 #   claw --yolo                   run shell tool calls without confirmation (default)
+#   claw --mentor                 enable mentor pass (review + revision)
+#   claw --no-mentor              disable mentor pass
 #   claw --reset                  wipe current session and continue
 #   claw --where                  print config + data dirs and exit
 #
@@ -36,6 +38,7 @@
 #   /md on|off|auto               toggle markdown rendering of replies
 #   /tools on|off                 toggle shell tool calling
 #   /yolo on|off                  toggle confirm prompt for shell tools
+#   /mentor on|off                toggle mentor pass
 #   /inst add <file>              add instruction file (this run only)
 #   /inst rm  <file>              remove instruction file (this run only)
 #   /inst list                    list active instruction files
@@ -72,12 +75,18 @@ CFG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/clawlite"
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/clawlite"
 SESS_DIR="$DATA_DIR/sessions"
 INST_DIR="$CFG_DIR/instructions"
+PROMPT_DIR="$CFG_DIR/prompts"
 CFG_FILE="$CFG_DIR/config"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
+REPO_DEFAULT_CFG="$SCRIPT_DIR/config.default"
 
-mkdir -p "$SESS_DIR" "$INST_DIR"
+mkdir -p "$SESS_DIR" "$INST_DIR" "$PROMPT_DIR"
 
 if [ ! -f "$CFG_FILE" ]; then
-  cat > "$CFG_FILE" <<'EOF'
+  if [ -f "$REPO_DEFAULT_CFG" ]; then
+    cp "$REPO_DEFAULT_CFG" "$CFG_FILE"
+  else
+    cat > "$CFG_FILE" <<'EOF'
 # clawlite config — sourced as POSIX shell.
 PROVIDER=openai
 MODEL_OPENAI=gpt-5.5
@@ -86,11 +95,15 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 ANTHROPIC_BASE_URL=https://api.anthropic.com/v1
 # Shell tool calling: model can run commands via <shell>...</shell> blocks.
 TOOLS=1
-TOOL_MAX_ITERS=5
-TOOL_OUTPUT_LIMIT=8192
+TOOL_MAX_ITERS=50
+TOOL_OUTPUT_LIMIT=32768
 # Shell tool calls run without confirmation by default. Set CLAW_YOLO=0
 # (or pass --confirm) to be prompted before each command.
 CLAW_YOLO=1
+# Mentor pass: run a second claw instance to critique + revise each answer.
+MENTOR=0
+# Allow mentor review pass to use shell tools for workspace inspection.
+MENTOR_TOOLS=1
 # Rolling memory windows (number of entries kept verbatim):
 USER_WINDOW=2000
 ASSIST_WINDOW=2000
@@ -100,6 +113,7 @@ JOURNAL=0
 # OPENAI_API_KEY=sk-...
 # ANTHROPIC_API_KEY=sk-ant-...
 EOF
+  fi
 fi
 
 if [ ! -f "$INST_DIR/00-default.md" ]; then
@@ -107,6 +121,73 @@ if [ ! -f "$INST_DIR/00-default.md" ]; then
 You are a helpful assistant running in a sandboxed Linux terminal in a
 browser tab (LinuxOnTab). Keep answers concise and copy-paste friendly.
 Use plain ASCII output unless markdown is explicitly requested.
+EOF
+fi
+
+if [ ! -f "$PROMPT_DIR/tool-system.txt" ]; then
+  cat > "$PROMPT_DIR/tool-system.txt" <<'EOF'
+# Shell tool
+
+You can execute shell commands in the user's current shell by emitting one
+or more blocks of the form:
+
+<shell>
+command here
+</shell>
+
+Rules:
+- Only emit a <shell> block when running a command is genuinely needed to
+  answer the user. For purely informational answers, do not emit one.
+- The block contents are passed verbatim to `sh -c`. Combined stdout+stderr
+  (truncated) and the exit code are returned in the next turn inside
+  <shell-result exit=N> ... </shell-result>.
+- Multiple <shell> blocks in one reply are run sequentially.
+- Do NOT wrap <shell> blocks in markdown code fences. Emit the raw tags.
+- After you receive shell-result(s), continue the conversation: either run
+  more commands, or summarize the outcome for the user. Stop emitting
+  <shell> blocks once you have what you need.
+- Prefer non-interactive, idempotent commands. Avoid destructive operations
+  unless the user explicitly asked for them.
+EOF
+fi
+
+if [ ! -f "$PROMPT_DIR/memory-user-compact.txt" ]; then
+  cat > "$PROMPT_DIR/memory-user-compact.txt" <<'EOF'
+You are a memory compactor. The user gave the following messages to an assistant in past sessions. Most are one-off requests and should be discarded. Extract ONLY content that is overarching and worth remembering forever: explicit rules, persistent preferences, durable facts about the user or their environment, naming conventions, project context that future turns will need.
+
+Output a markdown bulleted list under a heading "## Session rules and persistent info". Use short imperative bullets. Quote exact phrasing for hard rules. If nothing in the input qualifies, output exactly the single word: NONE
+EOF
+fi
+
+if [ ! -f "$PROMPT_DIR/memory-assistant-compact.txt" ]; then
+  cat > "$PROMPT_DIR/memory-assistant-compact.txt" <<'EOF'
+You are a memory compactor. Summarize the following past assistant replies into a brief journal entry capturing: key facts produced, decisions made, files/commands of lasting relevance, and notable outcomes. Skip routine acknowledgments and conversational filler. Output markdown under a heading "## Journal entry (<UTC timestamp>)". Be terse - 5 to 15 bullets. If nothing is worth journaling, output exactly NONE.
+EOF
+fi
+
+if [ ! -f "$PROMPT_DIR/mentor-review.txt" ]; then
+  cat > "$PROMPT_DIR/mentor-review.txt" <<'EOF'
+You are the mentor of another assistant. Evaluate the assistant's response against the original user request.
+
+Output plain text with exactly these sections:
+1) Verdict: PASS or REVISE
+2) Strengths: short bullets
+3) Issues: short bullets (be specific, especially missing requirements)
+4) Actionable feedback for assistant: numbered list of concrete fixes
+
+Keep feedback concise and implementation-focused.
+EOF
+fi
+
+if [ ! -f "$PROMPT_DIR/mentor-revision.txt" ]; then
+  cat > "$PROMPT_DIR/mentor-revision.txt" <<'EOF'
+Revise your previous answer based on mentor feedback.
+
+Requirements:
+- Fully address the original user request.
+- Apply every actionable mentor item unless it conflicts with the user's request.
+- Keep the response concise, concrete, and directly usable.
+- If the mentor is wrong about something, briefly explain and proceed correctly.
 EOF
 fi
 
@@ -120,9 +201,11 @@ fi
 : "${OPENAI_API_KEY:=}"
 : "${ANTHROPIC_API_KEY:=}"
 : "${TOOLS:=1}"
-: "${TOOL_MAX_ITERS:=5}"
-: "${TOOL_OUTPUT_LIMIT:=8192}"
+: "${TOOL_MAX_ITERS:=50}"
+: "${TOOL_OUTPUT_LIMIT:=32768}"
 : "${CLAW_YOLO:=1}"
+: "${MENTOR:=0}"
+: "${MENTOR_TOOLS:=1}"
 : "${USER_WINDOW:=2000}"
 : "${ASSIST_WINDOW:=2000}"
 : "${JOURNAL:=0}"
@@ -135,7 +218,7 @@ NO_INST=0
 RESET=0
 ONE_SHOT_MSG=""
 
-usage() { sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,50p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -148,6 +231,8 @@ while [ $# -gt 0 ]; do
     --no-tools) TOOLS=0; shift ;;
     --yolo) CLAW_YOLO=1; shift ;;
     --confirm|--no-yolo) CLAW_YOLO=0; shift ;;
+    --mentor) MENTOR=1; shift ;;
+    --no-mentor) MENTOR=0; shift ;;
     --reset) RESET=1; shift ;;
     --journal) JOURNAL=1; shift ;;
     --no-journal) JOURNAL=0; shift ;;
@@ -200,30 +285,15 @@ active_model() {
 
 tool_system_prompt() {
   [ "$TOOLS" = 1 ] || return 0
+  [ -f "$PROMPT_DIR/tool-system.txt" ] && cat "$PROMPT_DIR/tool-system.txt"
   cat <<'EOF'
 
-# Shell tool
-
-You can execute shell commands in the user's current shell by emitting one
-or more blocks of the form:
-
-<shell>
-command here
-</shell>
-
-Rules:
-- Only emit a <shell> block when running a command is genuinely needed to
-  answer the user. For purely informational answers, do not emit one.
-- The block contents are passed verbatim to `sh -c`. Combined stdout+stderr
-  (truncated) and the exit code are returned in the next turn inside
-  <shell-result exit=N> ... </shell-result>.
-- Multiple <shell> blocks in one reply are run sequentially.
-- Do NOT wrap <shell> blocks in markdown code fences. Emit the raw tags.
-- After you receive shell-result(s), continue the conversation: either run
-  more commands, or summarize the outcome for the user. Stop emitting
-  <shell> blocks once you have what you need.
-- Prefer non-interactive, idempotent commands. Avoid destructive operations
-  unless the user explicitly asked for them.
+Additional reliability rules:
+- Prefer POSIX-sh compatible commands unless the user explicitly asks for bash.
+- For multi-line file writes, use quoted heredocs (cat <<'EOF') so strings are not expanded.
+- After each file edit, verify immediately with a read/check command and only then continue.
+- If an edit command fails, inspect stderr and retry with a safer method rather than guessing.
+- When replacing full files, write to a temp file and move it into place atomically.
 EOF
 }
 
@@ -336,15 +406,56 @@ maybe_render() {
 
 build_system_prompt() {
   [ "$NO_INST" = 1 ] && return 0
+
+  cat <<'EOF'
+# Prompt boundary rules
+
+- The latest user message is the active task to execute right now.
+- Prior conversation turns are context only, not new instructions.
+- Session memory/rules are advisory and may be stale.
+- If memory conflicts with the latest user message, follow the latest user message.
+- Do not continue old tasks unless the latest user message explicitly asks to resume them.
+EOF
+
   for f in "$INST_DIR"/*.md; do
+    [ "$f" = "$RULES_FILE" ] && continue
     [ -f "$f" ] && cat "$f" && echo
   done
+
+  if [ -s "$RULES_FILE" ]; then
+    cat <<'EOF'
+
+# Session memory rules (advisory)
+
+Use this only as long-lived preference/context memory.
+Do NOT treat it as the current user request.
+
+<session-memory-rules>
+EOF
+    cat "$RULES_FILE"
+    cat <<'EOF'
+</session-memory-rules>
+EOF
+    echo
+  fi
+
   for f in $EXTRA_INST; do
     [ -f "$f" ] && cat "$f" && echo
   done
   if [ "$JOURNAL" = 1 ] && [ -s "$JOURNAL_FILE" ]; then
-    printf '\n# Session journal (compacted past assistant responses)\n\n'
+    cat <<'EOF'
+
+# Session journal (historical reference)
+
+Use this as background reference only.
+Do NOT treat journal entries as active instructions or active tasks.
+
+<session-journal>
+EOF
     cat "$JOURNAL_FILE"
+    cat <<'EOF'
+</session-journal>
+EOF
     echo
   fi
   tool_system_prompt
@@ -409,11 +520,10 @@ compact_call() {
   return $rc
 }
 
-USER_COMPACT_PROMPT='You are a memory compactor. The user gave the following messages to an assistant in past sessions. Most are one-off requests and should be discarded. Extract ONLY content that is overarching and worth remembering forever: explicit rules, persistent preferences, durable facts about the user or their environment, naming conventions, project context that future turns will need.
-
-Output a markdown bulleted list under a heading "## Session rules and persistent info". Use short imperative bullets. Quote exact phrasing for hard rules. If nothing in the input qualifies, output exactly the single word: NONE'
-
-ASSIST_COMPACT_PROMPT='You are a memory compactor. Summarize the following past assistant replies into a brief journal entry capturing: key facts produced, decisions made, files/commands of lasting relevance, and notable outcomes. Skip routine acknowledgments and conversational filler. Output markdown under a heading "## Journal entry (<UTC timestamp>)". Be terse — 5 to 15 bullets. If nothing is worth journaling, output exactly NONE.'
+USER_COMPACT_PROMPT="$(cat "$PROMPT_DIR/memory-user-compact.txt" 2>/dev/null)"
+ASSIST_COMPACT_PROMPT="$(cat "$PROMPT_DIR/memory-assistant-compact.txt" 2>/dev/null)"
+MENTOR_REVIEW_PROMPT="$(cat "$PROMPT_DIR/mentor-review.txt" 2>/dev/null)"
+MENTOR_REVISION_PROMPT="$(cat "$PROMPT_DIR/mentor-revision.txt" 2>/dev/null)"
 
 # Compact overflow lines from $1 (jsonl) using $2 as the system prompt and
 # append result to $3 (target file). Trim $1 to last $4 lines on success.
@@ -481,6 +591,13 @@ stream_curl() {
 # ----------------------------------------------------------------------
 send_openai() {
   user_msg="$1"
+  active_user_msg="$(
+    {
+      printf '## Active user request (highest priority)\n'
+      printf '%s\n' "$user_msg"
+      printf '\n## End active user request\n'
+    }
+  )"
   if [ -z "$OPENAI_API_KEY" ]; then
     echo "clawlite: OPENAI_API_KEY not set (edit $CFG_FILE or export it)" >&2
     return 1
@@ -492,7 +609,7 @@ send_openai() {
   jq -n \
     --arg model "$(active_model)" \
     --arg sys "$sys" \
-    --arg user "$user_msg" \
+    --arg user "$active_user_msg" \
     --slurpfile hist "$hist_file" '
     {
       model: $model,
@@ -556,6 +673,13 @@ send_openai() {
 # ----------------------------------------------------------------------
 send_anthropic() {
   user_msg="$1"
+  active_user_msg="$(
+    {
+      printf '## Active user request (highest priority)\n'
+      printf '%s\n' "$user_msg"
+      printf '\n## End active user request\n'
+    }
+  )"
   if [ -z "$ANTHROPIC_API_KEY" ]; then
     echo "clawlite: ANTHROPIC_API_KEY not set (edit $CFG_FILE or export it)" >&2
     return 1
@@ -567,7 +691,7 @@ send_anthropic() {
   jq -n \
     --arg model "$(active_model)" \
     --arg sys "$sys" \
-    --arg user "$user_msg" \
+    --arg user "$active_user_msg" \
     --slurpfile hist "$hist_file" '
     {
       model: $model,
@@ -729,19 +853,129 @@ run_tool_loop() {
   return 0
 }
 
-send() {
+send_single() {
+  user_msg="$1"
+  capture_file="${2:-}"
   if [ "$TOOLS" = 1 ]; then
     out_path="$(mktemp)"
     REPLY_OUT="$out_path"
-    send_provider "$1" || { rm -f "$out_path"; REPLY_OUT=""; return 1; }
+    send_provider "$user_msg" || { rm -f "$out_path"; REPLY_OUT=""; return 1; }
     REPLY_OUT=""
     run_tool_loop "$out_path"
     rc=$?
+    if [ -n "$capture_file" ]; then
+      cat "$out_path" > "$capture_file"
+    fi
     rm -f "$out_path"
     return $rc
   else
-    send_provider "$1"
+    if [ -n "$capture_file" ]; then
+      REPLY_OUT="$capture_file"
+      send_provider "$user_msg"
+      rc=$?
+      REPLY_OUT=""
+      return $rc
+    fi
+    send_provider "$user_msg"
   fi
+}
+
+mentor_review_prompt() {
+  initial_user="$1"
+  first_reply="$2"
+  [ -n "$MENTOR_REVIEW_PROMPT" ] || return 1
+  {
+    printf '%s\n\n' "$MENTOR_REVIEW_PROMPT"
+    printf 'Review instructions:\n'
+    printf '%s\n' '- You are the mentor pass. Validate whether the first assistant actually completed the request.'
+    printf '%s\n' '- If tools are available, inspect workspace files/results before giving feedback.'
+    printf '%s\n' '- Prefer read-only commands for review (ls/find/cat/sed/git status).'
+    printf '%s\n\n' '- Focus on missing requirements, incorrect edits, and verification gaps.'
+    printf 'Original user request:\n'
+    printf '%s\n\n' "$initial_user"
+    printf 'First assistant response:\n'
+    printf '%s\n' "$first_reply"
+  }
+}
+
+mentor_revise_prompt() {
+  initial_user="$1"
+  first_reply="$2"
+  feedback="$3"
+  {
+    printf '%s\n\n' "$MENTOR_REVISION_PROMPT"
+    printf 'Original user request:\n'
+    printf '%s\n\n' "$initial_user"
+    printf 'Your previous response:\n'
+    printf '%s\n\n' "$first_reply"
+    printf 'Mentor feedback:\n'
+    printf '%s\n' "$feedback"
+  }
+}
+
+send() {
+  msg="$1"
+  if [ "$MENTOR" != 1 ]; then
+    send_single "$msg"
+    return $?
+  fi
+
+  # Mentor mode runs two assistant passes and stores only the final answer.
+  saved_no_memory="$NO_MEMORY"
+  saved_tools="$TOOLS"
+  NO_MEMORY=1
+
+  first_out="$(mktemp)"
+  mentor_out="$(mktemp)"
+  final_out="$(mktemp)"
+  send_single "$msg" "$first_out" || {
+    NO_MEMORY="$saved_no_memory"
+    TOOLS="$saved_tools"
+    rm -f "$first_out" "$mentor_out" "$final_out"
+    return 1
+  }
+  first_reply="$(cat "$first_out")"
+
+  if [ "$MENTOR_TOOLS" = 1 ]; then
+    TOOLS=1
+  fi
+  review_msg="$(mentor_review_prompt "$msg" "$first_reply")"
+  if send_single "$review_msg" "$mentor_out"; then
+    feedback="$(cat "$mentor_out")"
+  else
+    feedback=""
+  fi
+  TOOLS="$saved_tools"
+
+  if [ -z "$feedback" ]; then
+    feedback="1) Verdict: REVISE
+2) Strengths:
+- first pass executed
+3) Issues:
+- mentor review failed to generate feedback
+4) Actionable feedback for assistant:
+1. Re-check the original user request line by line and ensure all requested file edits were completed and verified."
+    echo "[mentor] review failed; using fallback feedback and continuing second pass" >&2
+  fi
+  printf '\n\033[35m[mentor]\033[0m\n%s\n' "$feedback"
+
+  rev_msg="$(mentor_revise_prompt "$msg" "$first_reply" "$feedback")"
+  send_single "$rev_msg" "$final_out" || {
+    NO_MEMORY="$saved_no_memory"
+    TOOLS="$saved_tools"
+    rm -f "$first_out" "$mentor_out" "$final_out"
+    return 1
+  }
+  final_reply="$(cat "$final_out")"
+
+  NO_MEMORY="$saved_no_memory"
+  TOOLS="$saved_tools"
+  if [ "$saved_no_memory" = 0 ] && [ -n "$final_reply" ]; then
+    append_user "$msg"
+    append_assistant "$final_reply"
+  fi
+
+  rm -f "$first_out" "$mentor_out" "$final_out"
 }
 
 # ----------------------------------------------------------------------
@@ -832,6 +1066,15 @@ handle_slash() {
       esac
       ;;
     /yolo) echo "yolo: $([ "$CLAW_YOLO" = 1 ] && echo on || echo off)" ;;
+    "/mentor "*)
+      n="${cmd#/mentor }"
+      case "$n" in
+        on|1|true)  MENTOR=1; echo "(mentor: on)" ;;
+        off|0|false) MENTOR=0; echo "(mentor: off)" ;;
+        *) echo "(usage: /mentor on|off)" ;;
+      esac
+      ;;
+    /mentor) echo "mentor: $([ "$MENTOR" = 1 ] && echo on || echo off)" ;;
     "/inst add "*)
       f="${cmd#/inst add }"
       if [ -f "$f" ]; then EXTRA_INST="$EXTRA_INST $f"; echo "(added: $f)"
@@ -885,7 +1128,7 @@ printf 'clawlite  provider=%s  model=%s  session=%s  tools=%s%s  win=u%s/a%s%s\n
   "$([ "$TOOLS" = 1 ] && echo on || echo off)" \
   "$([ "$CLAW_YOLO" = 1 ] && echo ' yolo' || echo '')" \
   "$USER_WINDOW" "$ASSIST_WINDOW" \
-  "$([ "$JOURNAL" = 1 ] && echo ' journal' || echo '')"
+  "$([ "$JOURNAL" = 1 ] && echo ' journal' || echo '')$([ "$MENTOR" = 1 ] && echo ' mentor' || echo '')"
 printf '(/help for commands, /exit to quit)\n'
 
 while :; do

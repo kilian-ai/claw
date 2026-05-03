@@ -8,6 +8,9 @@ loop against OpenAI-compatible or Anthropic APIs, with:
 - **Shell tool calls** — the model emits `<shell>...</shell>` blocks and
   claw runs them locally, feeding back `<shell-result exit=N>` chunks.
   YOLO by default; pass `--confirm` to be prompted.
+- **Mentor mode (optional)** — run a second assistant pass that critiques
+  the first answer against the original request, then asks the first
+  assistant to revise based on that feedback.
 - **Per-session rolling memory** — user prompts and assistant replies
   are journaled to JSONL files. When entries exceed configurable
   windows, an LLM call compacts the overflow into:
@@ -28,6 +31,30 @@ loop against OpenAI-compatible or Anthropic APIs, with:
 ```sh
 wget -qO /usr/local/bin/claw https://linuxontab.com/local/clawlite.sh \
   && chmod +x /usr/local/bin/claw
+```
+
+### Install + seed exact config/data roots
+
+If you need claw to come with seeded prompts/instructions/data under a
+specific home path (for example `/Users/kilian`), run:
+
+```sh
+TARGET_HOME=/Users/kilian \
+  wget -qO- https://raw.githubusercontent.com/kilian-ai/claw/main/scripts/install-and-seed.sh | sh
+```
+
+This will:
+
+- install claw to `/usr/local/bin/claw`
+- seed `/Users/kilian/.config/clawlite/...`
+- seed `/Users/kilian/.local/share/clawlite/...`
+
+If claw is already installed, this explicit seed step is enough:
+
+```sh
+XDG_CONFIG_HOME=/Users/kilian/.config \
+XDG_DATA_HOME=/Users/kilian/.local/share \
+  /usr/local/bin/claw --where >/dev/null
 ```
 
 This serves the latest committed `clawlite.sh` from the LinuxOnTab
@@ -55,6 +82,14 @@ On first run, claw seeds:
 
 - `~/.config/clawlite/config` — provider, models, windows, toggles
 - `~/.config/clawlite/instructions/00-default.md` — base system prompt
+- `~/.config/clawlite/prompts/*.txt` — external prompt templates used by:
+  - shell tool behavior
+  - user-memory compaction
+  - assistant-journal compaction
+  - mentor review and revision flow
+
+If `config.default` exists next to `clawlite.sh` (repo checkout), it is
+copied to `~/.config/clawlite/config` on first run.
 
 Set your keys (env or in the config file):
 
@@ -72,8 +107,10 @@ Defaults:
 | `MODEL_ANTHROPIC`| `claude-sonnet-4-5`   |                                            |
 | `TOOLS`          | `1`                   | enable `<shell>` tool calls                |
 | `CLAW_YOLO`      | `1`                   | run shell tools without confirmation       |
-| `TOOL_MAX_ITERS` | `5`                   | max tool turns per user prompt             |
-| `TOOL_OUTPUT_LIMIT` | `8192`             | bytes of stdout/stderr fed back per call   |
+| `MENTOR`         | `0`                   | enable mentor review + revision pass       |
+| `MENTOR_TOOLS`   | `1`                   | allow mentor pass to inspect workspace     |
+| `TOOL_MAX_ITERS` | `50`                  | max tool turns per user prompt             |
+| `TOOL_OUTPUT_LIMIT` | `32768`            | bytes of stdout/stderr fed back per call   |
 | `USER_WINDOW`    | `2000`                | verbatim user-prompt history retained      |
 | `ASSIST_WINDOW`  | `2000`                | verbatim assistant-reply history retained  |
 | `JOURNAL`        | `0`                   | inject session journal into system prompt  |
@@ -93,6 +130,8 @@ claw [opts] [prompt]
   --confirm         prompt before each tool call (default: yolo)
   --no-yolo         alias for --confirm
   --yolo            run tools without confirmation (default)
+  --mentor          enable mentor pass (review + revision)
+  --no-mentor       disable mentor pass
   --reset           wipe live history for this session (keeps rules+journal)
   --journal         inject session journal into system prompt
   --no-journal      do not inject journal
