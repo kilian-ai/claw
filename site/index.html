@@ -270,6 +270,34 @@
     }
     .copy-btn:hover, .copy-btn.ok { border-color: var(--green); color: var(--green); }
 
+    .try-live {
+      margin-top: 18px;
+      font-size: 0.9rem;
+      color: var(--dim);
+    }
+    .try-live a {
+      color: var(--blue);
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(74,163,255,0.4);
+      padding-bottom: 1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .try-live a:hover { color: #7cc4ff; border-bottom-color: rgba(124,196,255,0.6); }
+    .try-live .lot-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--blue);
+      background: rgba(74,163,255,0.07);
+      border: 1px solid rgba(74,163,255,0.25);
+      padding: 2px 10px;
+      border-radius: 20px;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+
     /* ── SHARED SECTION ── */
     .section {
       padding: 80px 24px;
@@ -500,6 +528,12 @@
       </code>
       <button class="copy-btn" id="cpyBtn" onclick="copyInstall()">copy</button>
     </div>
+    <p class="try-live">
+      No install? Try it live in the browser at
+      <a href="https://linuxontab.com" target="_blank" rel="noopener">linuxontab.com</a>
+      <span class="lot-badge">&#x1f310; browser Linux</span>
+      — open a terminal, run <code style="font-size:0.88em;background:var(--bg3);padding:1px 5px;border-radius:4px;color:var(--text)">claw</code>, done.
+    </p>
   </section>
 </div>
 
