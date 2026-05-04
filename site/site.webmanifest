@@ -1,0 +1,17 @@
+{
+  "name": "claw",
+  "short_name": "claw",
+  "description": "A tiny POSIX-sh LLM REPL for any Linux box.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c18",
+  "theme_color": "#0c0c18",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

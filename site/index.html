@@ -3,8 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="claw — a tiny POSIX-sh LLM REPL for any Linux box. No Node, no npm. Just curl + jq.">
-  <title>claw — LLM REPL for any Linux box</title>
+  <meta name="theme-color" content="#0c0c18">
+  <meta name="color-scheme" content="dark">
+
+  <!-- ── Primary SEO ─────────────────────────────────────────────────── -->
+  <title>claw — Tiny POSIX-sh LLM REPL for any Linux box</title>
+  <meta name="description" content="claw is a single shell script that gives you a streaming chat loop against OpenAI or Anthropic — with shell tool calls, rolling memory, and mentor mode. Zero dependencies beyond curl and jq.">
+  <meta name="keywords" content="claw, clawlite, llm cli, shell llm, posix llm, openai cli, anthropic cli, terminal chatgpt, linux llm repl, llm shell tool, busybox llm, alpine llm, curl jq llm">
+  <meta name="author" content="kilian-ai">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="googlebot" content="index, follow">
+  <link rel="canonical" href="https://getclaw.site/">
+
+  <!-- ── Open Graph (Facebook, LinkedIn, Discord, Slack) ─────────────── -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="claw">
+  <meta property="og:url" content="https://getclaw.site/">
+  <meta property="og:title" content="claw — Tiny POSIX-sh LLM REPL for any Linux box">
+  <meta property="og:description" content="A single shell script. Streaming chat against OpenAI or Anthropic. Shell tool calls, rolling memory, mentor mode. No Node, no npm — just curl + jq.">
+  <meta property="og:image" content="https://getclaw.site/og.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="claw — terminal-style logo on dark background with tagline 'LLM REPL for any Linux box'">
+  <meta property="og:locale" content="en_US">
+
+  <!-- ── Twitter / X ─────────────────────────────────────────────────── -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="claw — Tiny POSIX-sh LLM REPL for any Linux box">
+  <meta name="twitter:description" content="A single shell script. Streaming chat against OpenAI or Anthropic. Shell tool calls, rolling memory, mentor mode. No Node, no npm — just curl + jq.">
+  <meta name="twitter:image" content="https://getclaw.site/og.svg">
+  <meta name="twitter:image:alt" content="claw — terminal-style logo on dark background">
+
+  <!-- ── Icons ──────────────────────────────────────────────────────── -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- ── Structured data (JSON-LD) ──────────────────────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://getclaw.site/#website",
+        "url": "https://getclaw.site/",
+        "name": "claw",
+        "description": "A tiny POSIX-sh LLM REPL for any Linux box.",
+        "inLanguage": "en-US"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "claw",
+        "alternateName": "clawlite",
+        "operatingSystem": "Linux, macOS, BSD, Alpine, busybox",
+        "applicationCategory": "DeveloperApplication",
+        "applicationSubCategory": "CommandLineInterface",
+        "url": "https://getclaw.site/",
+        "downloadUrl": "https://getclaw.site/claw",
+        "license": "https://github.com/kilian-ai/claw/blob/main/LICENSE",
+        "codeRepository": "https://github.com/kilian-ai/claw",
+        "programmingLanguage": "Shell",
+        "softwareRequirements": "POSIX sh, curl, jq",
+        "description": "A single shell script that gives you a streaming chat loop against OpenAI or Anthropic — with shell tool calls, rolling memory, and mentor mode.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "kilian-ai",
+          "url": "https://github.com/kilian-ai"
+        }
+      }
+    ]
+  }
+  </script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
