@@ -175,6 +175,28 @@ has `~/.ai/LinuxOnTab` next to it to bump the deployed copy:
 commits, and pushes the LinuxOnTab repo. GitHub Pages then serves the
 new file within a minute.)
 
+## Publish greybox page to kilian-ai.com
+
+To sync `greybox.html` into your website repo as `index.html`:
+
+```sh
+SITE_DIR=/path/to/kilian-ai.com-repo \
+  ./scripts/sync-greybox-to-site.sh
+```
+
+Common domain setup with CNAME and auto-push:
+
+```sh
+SITE_DIR=/path/to/kilian-ai.com-repo \
+CNAME=kilian-ai.com PUSH=1 \
+  ./scripts/sync-greybox-to-site.sh
+```
+
+Defaults:
+
+- `SITE_DIR=../kilian-ai.com`
+- `DEST_PATH=index.html`
+
 ## License
 
 MIT — see `LICENSE`.
