@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /claw
+
+Sitemap: https://getclaw.site/sitemap.xml

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="35%" r="55%">
+      <stop offset="0%"  stop-color="#36e06f" stop-opacity="0.15"/>
+      <stop offset="60%" stop-color="#0c0c18" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="78%" cy="68%" r="40%">
+      <stop offset="0%"  stop-color="#4aa3ff" stop-opacity="0.12"/>
+      <stop offset="60%" stop-color="#0c0c18" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="630" fill="#0c0c18"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <rect width="1200" height="630" fill="url(#glow2)"/>
+
+  <!-- top badge -->
+  <g transform="translate(600 130)" text-anchor="middle"
+     font-family="Courier New, monospace" font-size="20" fill="#36e06f"
+     letter-spacing="4">
+    <rect x="-180" y="-22" width="360" height="40" rx="20"
+          fill="#0c0c18" stroke="#36e06f" stroke-opacity="0.4"/>
+    <text y="6">PURE POSIX SH · v0 · MIT</text>
+  </g>
+
+  <!-- main wordmark -->
+  <text x="600" y="285" text-anchor="middle"
+        font-family="-apple-system, Helvetica, Arial, sans-serif"
+        font-weight="700" font-size="120" fill="#dde0f0"
+        letter-spacing="-4">
+    claw<tspan fill="#36e06f">_</tspan>
+  </text>
+
+  <!-- tagline -->
+  <text x="600" y="370" text-anchor="middle"
+        font-family="-apple-system, Helvetica, Arial, sans-serif"
+        font-weight="600" font-size="44" fill="#dde0f0"
+        letter-spacing="-1">
+    An LLM REPL that runs on <tspan fill="#36e06f">any Linux box.</tspan>
+  </text>
+
+  <!-- subline -->
+  <text x="600" y="430" text-anchor="middle"
+        font-family="-apple-system, Helvetica, Arial, sans-serif"
+        font-size="26" fill="#7078a0">
+    Shell tool calls · Rolling memory · Mentor mode
+  </text>
+
+  <!-- terminal-style install pill -->
+  <g transform="translate(600 530)" text-anchor="middle">
+    <rect x="-460" y="-32" width="920" height="64" rx="14"
+          fill="#111120" stroke="#252545"/>
+    <text y="9" font-family="Courier New, monospace" font-size="22">
+      <tspan fill="#7078a0">$ </tspan>
+      <tspan fill="#36e06f">wget</tspan>
+      <tspan fill="#dde0f0"> -qO /usr/local/bin/claw https://getclaw.site/claw</tspan>
+    </text>
+  </g>
+
+  <!-- url bottom -->
+  <text x="600" y="600" text-anchor="middle"
+        font-family="Courier New, monospace" font-size="18" fill="#7078a0"
+        letter-spacing="2">
+    getclaw.site
+  </text>
+</svg>
