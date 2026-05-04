@@ -8,7 +8,7 @@
 
   <!-- ── Primary SEO ─────────────────────────────────────────────────── -->
   <title>claw — Tiny POSIX-sh LLM REPL & Shell AI for Linux</title>
-  <meta name="description" content="claw is a single shell script that gives you a streaming chat loop against OpenAI or Anthropic — with shell tool calls, rolling memory, and mentor mode. Zero dependencies beyond curl and jq.">
+  <meta name="description" content="claw is a single shell script that gives you a streaming chat loop against OpenAI or Anthropic — with shell tool calls, rolling memory, skills, and mentor mode. Zero dependencies beyond curl and jq.">
   <meta name="keywords" content="claw, clawlite, llm cli, shell llm, posix llm, openai cli, anthropic cli, terminal chatgpt, linux llm repl, llm shell tool, busybox llm, alpine llm, curl jq llm">
   <meta name="author" content="kilian-ai">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
@@ -20,7 +20,7 @@
   <meta property="og:site_name" content="claw">
   <meta property="og:url" content="https://getclaw.site/">
   <meta property="og:title" content="claw — Tiny POSIX-sh LLM REPL for any Linux box">
-  <meta property="og:description" content="A single shell script. Streaming chat against OpenAI or Anthropic. Shell tool calls, rolling memory, mentor mode. No Node, no npm — just curl + jq.">
+  <meta property="og:description" content="A single shell script. Streaming chat against OpenAI or Anthropic. Shell tool calls, rolling memory, skills, mentor mode. No Node, no npm — just curl + jq.">
   <meta property="og:image" content="https://getclaw.site/og.png">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
@@ -31,7 +31,7 @@
   <!-- ── Twitter / X ─────────────────────────────────────────────────── -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="claw — Tiny POSIX-sh LLM REPL for any Linux box">
-  <meta name="twitter:description" content="A single shell script. Streaming chat against OpenAI or Anthropic. Shell tool calls, rolling memory, mentor mode. No Node, no npm — just curl + jq.">
+  <meta name="twitter:description" content="A single shell script. Streaming chat against OpenAI or Anthropic. Shell tool calls, rolling memory, skills, mentor mode. No Node, no npm — just curl + jq.">
   <meta name="twitter:image" content="https://getclaw.site/og.png">
   <meta name="twitter:image:alt" content="claw — An LLM REPL that runs on any Linux box. Shows install command.">
 
@@ -575,6 +575,11 @@
       <div class="feat-icon">🗂</div>
       <div class="feat-name">Named sessions</div>
       <div class="feat-desc">Run isolated sessions with <code class="g">claw -s myproject</code>. Each has its own history, compacted rules, and journal — switch instantly with <code class="g">/load</code>.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📚</div>
+      <div class="feat-name">Skills</div>
+      <div class="feat-desc">Drop any <code>.md</code> file into <code class="g">~/.config/clawlite/instructions/</code> and it becomes part of the system prompt — project context, tool guides, domain knowledge. No restart needed.</div>
     </div>
   </div>
 </section>
