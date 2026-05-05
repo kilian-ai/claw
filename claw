@@ -33,6 +33,11 @@
 #   /load <name>                  switch to session <name>
 #   /save <name>                  copy current session to <name>
 #   /model <name>                 switch model (this run only)
+#
+# Shell passthrough (REPL):
+#   !<cmd>                        run a raw shell command (e.g. !ls -la)
+#                                 exported variables take effect immediately
+#                                 (e.g. !export OPENAI_API_KEY=sk-...)
 #   /provider openai|anthropic    switch provider (this run only)
 #   /journal on|off|show          toggle/show per-session journal injection
 #   /md on|off|auto               toggle markdown rendering of replies
@@ -600,6 +605,7 @@ send_openai() {
   )"
   if [ -z "$OPENAI_API_KEY" ]; then
     echo "clawlite: OPENAI_API_KEY not set (edit $CFG_FILE or export it)" >&2
+    echo "  hint: !export OPENAI_API_KEY=sk-..." >&2
     return 1
   fi
   sys="$(build_system_prompt)"
@@ -682,6 +688,7 @@ send_anthropic() {
   )"
   if [ -z "$ANTHROPIC_API_KEY" ]; then
     echo "clawlite: ANTHROPIC_API_KEY not set (edit $CFG_FILE or export it)" >&2
+    echo "  hint: !export ANTHROPIC_API_KEY=sk-ant-..." >&2
     return 1
   fi
   sys="$(build_system_prompt)"
@@ -1139,6 +1146,21 @@ while :; do
     /*)
       handle_slash "$line"; rc=$?
       [ "$rc" = 2 ] && break
+      continue
+      ;;
+    !*)
+      # Raw shell passthrough: eval in a wrapper that re-exports any
+      # variables set by the command (e.g. !export OPENAI_API_KEY=...).
+      sh_cmd="${line#!}"
+      tmpenv="$(mktemp)"
+      eval "$sh_cmd" && env > "$tmpenv"
+      while IFS='=' read -r k v; do
+        case "$k" in
+          *[!A-Za-z0-9_]*|'') continue ;;
+        esac
+        export "$k=$v" 2>/dev/null || true
+      done < "$tmpenv"
+      rm -f "$tmpenv"
       continue
       ;;
   esac
