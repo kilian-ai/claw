@@ -271,12 +271,36 @@
     .copy-btn:hover, .copy-btn.ok { border-color: var(--green); color: var(--green); }
 
     .try-live {
-      margin-top: 18px;
+      margin-top: 14px;
       font-size: 0.9rem;
       color: var(--dim);
     }
-    .try-live a {
-      color: var(--blue);
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green);
+      color: #0c0c18;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 13px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.15s, transform 0.12s;
+      white-space: nowrap;
+    }
+    .cta-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .cta-btn:active { filter: brightness(0.95); transform: none; }
+    .cta-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 24px;
+    }
       text-decoration: none;
       border-bottom: 1px dashed rgba(74,163,255,0.4);
       padding-bottom: 1px;
@@ -528,12 +552,17 @@
       </code>
       <button class="copy-btn" id="cpyBtn" onclick="copyInstall()">copy</button>
     </div>
-    <p class="try-live">
-      No install? Try it live in the browser at
-      <a href="https://linuxontab.com" target="_blank" rel="noopener">linuxontab.com</a>
-      <span class="lot-badge">&#x1f310; browser Linux</span>
-      — open a terminal, run <code style="font-size:0.88em;background:var(--bg3);padding:1px 5px;border-radius:4px;color:var(--text)">claw</code>, done.
-    </p>
+    <div class="cta-row">
+      <a class="cta-btn"
+         href="http://linuxontab.com/shell/?pip=1&amp;pipx=20&amp;pipy=50&amp;pipw=600&amp;piph=400&amp;browser=https://getclaw.site&amp;postboot=https://getclaw.site/install.sh"
+         target="_blank" rel="noopener">
+        &#9654;&nbsp; test it now
+      </a>
+      <p class="try-live">
+        runs in your browser &mdash; no install needed
+        <span class="lot-badge">&#x1f310; browser Linux</span>
+      </p>
+    </div>
   </section>
 </div>
 
