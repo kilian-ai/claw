@@ -638,7 +638,7 @@ send_openai() {
         "data: [DONE]") break ;;
         "data: "*)
           chunk="${line#data: }"
-          delta="$(printf '%s' "$chunk" | jq -r '.choices[0].delta.content // empty' 2>/dev/null; printf x)"
+          delta="$(printf '%s' "$chunk" | jq -j '.choices[0].delta.content // empty' 2>/dev/null; printf x)"
           delta="${delta%x}"
           if [ -n "$delta" ]; then
             printf '%s' "$delta"
@@ -720,7 +720,7 @@ send_anthropic() {
       case "$line" in
         "data: "*)
           chunk="${line#data: }"
-          delta="$(printf '%s' "$chunk" | jq -r 'select(.type=="content_block_delta") | .delta.text // empty' 2>/dev/null; printf x)"
+          delta="$(printf '%s' "$chunk" | jq -j 'select(.type=="content_block_delta") | .delta.text // empty' 2>/dev/null; printf x)"
           delta="${delta%x}"
           if [ -n "$delta" ]; then
             printf '%s' "$delta"
