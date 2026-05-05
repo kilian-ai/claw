@@ -81,6 +81,7 @@ set -u
 # Self-exec under rlwrap when available and we're interactive.
 [ -z "${CLAW_RLWRAP:-}" ] && [ -t 0 ] && [ -t 1 ] && command -v rlwrap >/dev/null 2>&1 && {
   _rlhist="${XDG_DATA_HOME:-$HOME/.local/share}/clawlite/rlwrap.history"
+  mkdir -p "${_rlhist%/*}"
   exec env CLAW_RLWRAP=1 rlwrap -H "$_rlhist" -s 2000 "$0" "$@"
 }
 
